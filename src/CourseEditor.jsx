@@ -81,10 +81,14 @@ function Info({ course, reload }) {
 
 function Curriculum({ course, reload }) {
   const act = useAct(reload);
-  const [name, setName] = useState(''), [lesson, setLesson] = useState(null);
+  const [name, setName] = useState(''), [lesson, setLesson] = useState(null), [renaming, setRenaming] = useState(null);
   const req = (path, method = 'POST', body) => () => api(`/admin${path}`, { method, body });
   const IconBtn = ({ label, onClick, icon: Icon, danger }) => <button type="button" aria-label={label} title={label} onClick={onClick} className={`rounded p-1.5 text-slate-500 hover:bg-slate-100 ${danger ? 'hover:text-red-700' : 'hover:text-ink'}`}><Icon className="h-4 w-4" /></button>;
-  const rename = async (m) => { const t = window.prompt('Nombre del módulo', m.title); if (t?.trim()) act(req(`/modules/${m.id}`, 'PUT', { title: t })); };
+  const rename = (m) => setRenaming({ id: m.id, title: m.title });
+  const saveRename = async (e) => {
+    e.preventDefault();
+    if (await act(req(`/modules/${renaming.id}`, 'PUT', { title: renaming.title }), 'Módulo renombrado.')) setRenaming(null);
+  };
   return (
     <section className="card h-fit p-5">
       <h2 className="text-lg font-bold">Temario: módulos y lecciones</h2>
@@ -110,6 +114,19 @@ function Curriculum({ course, reload }) {
       <form className="mt-4 flex gap-2" onSubmit={async (e) => { e.preventDefault(); (await act(req(`/courses/${course.id}/modules`, 'POST', { title: name }), 'Módulo agregado.')) && setName(''); }}>
         <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre del nuevo módulo (ej.: Tema 1: Introducción)" aria-label="Nuevo módulo" required /><button className="btn-navy shrink-0"><Plus className="h-4 w-4" />Módulo</button>
       </form>
+      {renaming && (
+        <Modal title="Renombrar módulo" onClose={() => setRenaming(null)}>
+          <form onSubmit={saveRename} className="space-y-4">
+            <Field label="Nombre del módulo" required hint="Ejemplo: Tema 1: Comprensión lectora">
+              <input className="input" required autoFocus maxLength={150} value={renaming.title} onFocus={(e) => e.target.select()} onChange={(e) => setRenaming({ ...renaming, title: e.target.value })} />
+            </Field>
+            <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
+              <button type="button" className="btn-outline" onClick={() => setRenaming(null)}>Cancelar</button>
+              <button className="btn-primary" disabled={!renaming.title.trim()}>Guardar nombre</button>
+            </div>
+          </form>
+        </Modal>
+      )}
       {lesson && <LessonForm initial={lesson} onClose={() => setLesson(null)} onSaved={() => { setLesson(null); reload(); }} />}
     </section>);
 }
