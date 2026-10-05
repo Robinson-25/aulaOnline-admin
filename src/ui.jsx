@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AlertCircle, CheckCircle2, Inbox, Loader2, Star, X } from 'lucide-react';
-import { api } from './api.js';
+import { api, onLive, LIVE_SCOPES } from './api.js';
 
 export const Spinner = ({ className = 'h-5 w-5' }) => <Loader2 className={`animate-spin ${className}`} aria-hidden="true" />;
 export const PageLoader = ({ text = 'Cargando…' }) => (
@@ -111,6 +111,21 @@ export function useLoad(path, deps = []) {
     return api(path).then((data) => setState({ data, error: null, loading: false })).catch((error) => setState({ data: null, error, loading: false }));
   }, [path]);
   useEffect(() => { reload(); }, [reload, ...deps]); // eslint-disable-line
+  // Actualización en vivo: cuando el backend avisa de un cambio, se vuelven a pedir los datos
+  // en silencio (sin pantalla de carga). Si la pestaña está oculta, se espera a que vuelva a verse.
+  useEffect(() => {
+    if (!path) return;
+    let timer, pending = false, alive = true;
+    const refresh = () => api(path).then((data) => alive && setState({ data, error: null, loading: false })).catch(() => {});
+    const off = onLive((ev) => {
+      if (!LIVE_SCOPES.includes(ev.scope)) return;
+      clearTimeout(timer);
+      timer = setTimeout(() => { if (document.hidden) pending = true; else refresh(); }, 400);
+    });
+    const onVisible = () => { if (!document.hidden && pending) { pending = false; refresh(); } };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { alive = false; off(); clearTimeout(timer); document.removeEventListener('visibilitychange', onVisible); };
+  }, [path]);
   return { ...state, reload };
 }
 export const LoadState = ({ s, children }) =>
