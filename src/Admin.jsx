@@ -6,6 +6,7 @@ import { useAuth } from './auth.jsx';
 import { useLoad, LoadState, Empty, Badge, Modal, Button, Field, Alert, Stars, useToast } from './ui.jsx';
 import { Cover } from './Cover.jsx';
 import CourseEditor from './CourseEditor.jsx';
+import Students from './pages/Estudiantes.jsx';
 
 const NAV = [['', 'Resumen', LayoutDashboard], ['cursos', 'Cursos', BookOpen], ['compras', 'Compras', ShoppingCart], ['estudiantes', 'Estudiantes', Users], ['preguntas', 'Preguntas', MessageCircleQuestion], ['resenas', 'Reseñas', Star], ['certificados', 'Certificados', Award], ['ajustes', 'Cupones y categorías', Tag], ['mensajes', 'Mensajes', Mail]];
 
@@ -120,25 +121,6 @@ function Orders() {
       <Field label="Motivo (lo verá el estudiante)"><textarea className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ej.: No encontramos el pago con ese número de operación." /></Field>
       <div className="mt-4 flex justify-end gap-2"><button className="btn-outline" onClick={() => setReject(null)}>Cancelar</button><button className="btn-primary" onClick={async () => { (await act(post(`/admin/orders/${reject.id}/reject`, { note }), 'Compra rechazada.')) && setReject(null); }}>Rechazar compra</button></div>
     </Modal>}</>);
-}
-
-function Students() {
-  const s = useLoad('/admin/students'), courses = useLoad('/admin/courses'), act = useAct(s.reload);
-  const [form, setForm] = useState(null);
-  return (<><Title action={<button className="btn-primary" onClick={() => setForm({ email: '', courseId: '' })}><Plus className="h-4 w-4" />Matricular manualmente</button>}>Estudiantes</Title>
-    <LoadState s={s}>{(list) => list.length ? (
-      <Table head={['Estudiante', 'Registro', 'Cursos y avance']}>{list.map((u) => (
-        <tr key={u.id}><td className="td"><b>{u.name}</b><span className="block text-xs text-slate-500">{u.email}{u.phone && ` · ${u.phone}`}</span></td><td className="td whitespace-nowrap">{fecha(u.created_at)}</td>
-          <td className="td">{u.courses.length ? <ul className="space-y-1">{u.courses.map((c) => <li key={c.course_id} className="flex items-center gap-2"><span className="min-w-0 flex-1">{c.title}</span><b className="tabular-nums">{c.percent}%</b>
-            <button aria-label="Quitar matrícula" className="rounded p-1 text-slate-400 hover:text-red-700" onClick={() => act(del(`/admin/enroll/${u.id}/${c.course_id}`), 'Matrícula retirada.', ['Quitar matrícula', `${u.name} perderá el acceso a "${c.title}".`, 'Sí, quitar'])}><X className="h-4 w-4" /></button></li>)}</ul> : <span className="text-slate-500">Sin cursos</span>}</td></tr>))}</Table>
-    ) : <Empty icon={Users} title="Aún no hay estudiantes registrados" />}</LoadState>
-    {form && <Modal title="Matricular manualmente" onClose={() => setForm(null)}>
-      <form className="space-y-4" onSubmit={async (e) => { e.preventDefault(); (await act(post('/admin/enroll', form), 'Estudiante matriculado.')) && setForm(null); }}>
-        <p className="text-sm text-slate-600">Da acceso a un curso sin pasar por la compra (por ejemplo, un pago recibido en persona).</p>
-        <Field label="Correo del estudiante" required hint="Debe tener una cuenta registrada."><input className="input" type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
-        <Field label="Curso" required><select className="input" required value={form.courseId} onChange={(e) => setForm({ ...form, courseId: e.target.value })}><option value="">Selecciona…</option>{courses.data?.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</select></Field>
-        <button className="btn-primary w-full">Matricular</button>
-      </form></Modal>}</>);
 }
 
 function Questions() {
